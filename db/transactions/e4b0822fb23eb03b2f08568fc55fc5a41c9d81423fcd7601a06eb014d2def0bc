@@ -1,0 +1,10 @@
+{
+    "uuid": "232c99e8633011e89e71d05099801ca2",
+    "vin": [],
+    "vout": [
+        {
+            "value": 25,
+            "address": "1MmWbFY4dwsovy93zSjC2BkRZ43LU7cbhT"
+        }
+    ]
+}

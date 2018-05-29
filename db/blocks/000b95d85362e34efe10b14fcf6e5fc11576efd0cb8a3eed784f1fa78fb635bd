@@ -1,0 +1,8 @@
+{
+    "previous_block": "0001092a085337e94c1782f694bdc3000abc2ddbaaa61d419ccc884a177ad7b3",
+    "checksum": "000b95d85362e34efe10b14fcf6e5fc11576efd0cb8a3eed784f1fa78fb635bd",
+    "nonce": 4063,
+    "transactions": [
+        "19c98de95775f388508ee6759b4c1781ea4b2a5ac536e4f00a23e9372299a236"
+    ]
+}
