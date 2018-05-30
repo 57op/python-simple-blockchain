@@ -60,7 +60,7 @@ class Wallet:
 			fh.write(wif)
 			
 	def sign(self, message):
-		return self.private_key.sign(message)
+		return self.private_key.sign_deterministic(message)
 		
 	def verify(self, signature):
 		return self.public_key.verify(signature)
@@ -72,16 +72,21 @@ class Wallet:
 		balance = 0
 		
 		for t in dao.TransactionDAO.get_transactions_for(pubkey, addr):
-			for input in t.inputs:
-				if input.pubkey == pubkey:
-					i_tx = dao.TransactionDAO.read_by_hash(hexlify(input.utxo).decode())
-					balance -= i_tx.outputs[input.vout].value
-					#print('[input] -%d' % i_tx.outputs[input.vout].value)
+			tx_count = len(list(dao.BlockDAO.tx_in_blocks(t.checksum())))
 			
-			for output in t.outputs:
-				if output.address == addr:
-					balance += output.value
-					#print('[output] +%d' % output.value)
+			print(hexlify(t.checksum()).decode(), tx_count)
+		
+			for _ in range(tx_count):
+				for input in t.inputs:
+					if input.pubkey == pubkey:
+						i_tx = dao.TransactionDAO.read_by_hash(hexlify(input.utxo).decode())
+						balance -= i_tx.outputs[input.vout].value
+						#print('[input] -%d' % i_tx.outputs[input.vout].value)
+				
+				for output in t.outputs:
+					if output.address == addr:
+						balance += output.value
+						#print('[output] +%d' % output.value)
 		
 		return balance
 		
