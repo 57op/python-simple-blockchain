@@ -9,6 +9,19 @@ class Block:
 		self.hash = hash
 		self.nonce = nonce
 		
+	def pow_data(self):
+		data = '%s' % hexlify(self.previous_block).decode()
+		
+		for t in map(lambda t: hexlify(t).decode(), self.transactions):
+			data += t
+	
+		return data.encode()
+		
+	def is_hash_valid(self, hash):
+		# static difficulty, hash must start with 0000
+		return (hash[0] & 0xFF) == 0x00 and (hash[1] & 0xFF) == 0x00
+	
+	'''
 	def pow(self):
 		data = '%s' % hexlify(self.previous_block).decode()
 		
@@ -31,6 +44,7 @@ class Block:
 		self.nonce = nonce
 		
 		return nonce, hash
+	'''
 		
 	def checksum(self):
 		assert self.hash != None, 'cannot return checksum, you need to compute the PoW'
