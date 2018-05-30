@@ -32,7 +32,7 @@ class TransactionDAO(BasicDAO):
 		deserialized_transaction = json.loads(serialized_transaction)
 		transaction = t.Transaction()
 		
-		transaction.uuid = unhexlify(deserialized_transaction['uuid'])
+		# transaction.uuid = unhexlify(deserialized_transaction['uuid'])
 		
 		for input in deserialized_transaction['vin']:
 			transaction.addInput(t.TransactionInput(unhexlify(input['tx']), input['vout'], unhexlify(input['signature']), unhexlify(input['pubkey'])))
@@ -56,33 +56,56 @@ class TransactionDAO(BasicDAO):
 		self.write(hexlify(transaction.checksum()).decode(), transaction.serialize() )
 		
 	def get_transactions_for(self, pubkey, address):
-		transaction_names = glob(os.path.join(self.root, '*'))
-		
-		for n in transaction_names:
-			t = self.read_by_hash(os.path.basename(n))
+		for n in glob(os.path.join(self.root, '*')):
+			tx = self.read_by_hash(os.path.basename(n))
 			keep = False
 			
-			for input in t.inputs:
+			for input in tx.inputs:
 				if input.pubkey == pubkey:
 					keep = True
 					break
 			
 			if keep:
-				yield t
+				yield tx
 				continue
 			
 			keep = False
 			
-			for output in t.outputs:
+			for output in tx.outputs:
 				if output.address == address:
 					keep = True
 					break
 					
 			if keep:
-				yield t
+				yield tx
+				
+	def get_transactions_unlocks(self, tx_hash):
+		u = 0
+	
+		for h in glob(os.path.join(self.root, '*')):
+			h = os.path.basename(h)
+			tx = self.read_by_hash(h)
+			
+			for input in tx.inputs:
+				if input.utxo == tx_hash:
+					u += 1
+		
+		return u
 		
 class BlockDAO(BasicDAO):
-	# todo read_by_hash
+	def read_by_hash(self, hash):
+		serialized_block = self.read(hash)
+		return self.deserialize(serialized_block)
+		
+	def deserialize(self, serialized_block):
+		deserialized_block = json.loads(serialized_block)
+		
+		return b.Block(
+			unhexlify(deserialized_block['previous_block']),
+			[unhexlify(tx) for tx in deserialized_block['transactions']],
+			unhexlify(deserialized_block['checksum']),
+			deserialized_block['nonce'])
+	
 
 	def store(self, block):
 		self.write( hexlify(block.checksum()).decode(), block.serialize() )
@@ -92,6 +115,16 @@ class BlockDAO(BasicDAO):
 		blocks.sort(key=os.path.getmtime)
 		
 		return unhexlify(os.path.basename(blocks[-1]))
+		
+	def tx_in_blocks(self, tx_hash):
+		for block_hash in glob(os.path.join(self.root, '*')):
+			block_hash = os.path.basename(block_hash)
+			block = self.read_by_hash(block_hash)
+			
+			for tx in block.transactions:
+				if tx == tx_hash:
+					yield block.checksum()
+					break
 	
 DB_DIR = 'db'
 TRANSACTIONS_DIR = os.path.join(DB_DIR, 'transactions')
@@ -103,7 +136,7 @@ BlockDAO = BlockDAO(BLOCKS_DIR)
 '''
 import wallet
 
-w = Wallet('test_wallets/alice')
+w = wallet.Wallet('test_wallets/alice')
 # here create the genesis block
 coinbase = t.Transaction()
 coinbase.addOutput(t.TransactionOutput(25, w.address()))
