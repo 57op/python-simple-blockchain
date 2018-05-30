@@ -56,7 +56,6 @@ class Transaction:
 		self.inputs = []
 		self.outputs = []
 		self._hash = None
-		self.uuid = uuid.uuid1().bytes
 		
 	def addInput(self, input):
 		self.inputs.append(input)
@@ -67,6 +66,7 @@ class Transaction:
 	def verify(self):
 		hash = self.checksum()
 		
+		'''
 		try:
 			dao.TransactionDAO.read_by_hash(binascii.hexlify(hash).decode())
 			# the transaction was already spent
@@ -74,6 +74,7 @@ class Transaction:
 			return False
 		except:
 			pass
+		'''
 		
 		valid = False	
 		# we need to scan the blockchain in order to understand
@@ -87,7 +88,17 @@ class Transaction:
 			# output = input.utxo.outputs[input.vout]
 			utxo = dao.TransactionDAO.read_by_hash(binascii.hexlify(input.utxo).decode())
 			output = utxo.outputs[input.vout]
-
+			
+			# how many time utxo was mined into a block?
+			tx_utxo_count = len(list(dao.BlockDAO.tx_in_blocks(utxo.checksum())))
+			tx_this_count = len(list(dao.BlockDAO.tx_in_blocks(hash)))
+			
+			# print('%s -> [count] %d, [unlock] %d' % (binascii.hexlify(utxo.checksum()).decode(), tx_utxo_count, tx_this_count))
+			if (tx_utxo_count - tx_this_count) < 1:
+				print('The UTXO [%s] cannot be spent anymore' % binascii.hexlify(utxo.checksum()).decode())
+				break
+			
+			
 			# input pubkey to address
 			sha256 = hashlib.new('sha256')
 			ripemd160 = hashlib.new('ripemd160')
@@ -96,7 +107,7 @@ class Transaction:
 			ripemd160.update(sha256.digest())
 			
 			if output.address != base58.b58encode_check(b'\x00' + ripemd160.digest()):
-				print('You cannot unlock this output with this public key')
+				# print('You cannot unlock this output with this public key')
 				break
 			
 			# the unlocking address is the same as the locking one				
@@ -129,6 +140,7 @@ class Transaction:
 			#print('Every input can be unlocked')
 			valid = True
 		
+		# signature is valid
 		if valid:
 			outputs_value = 0
 			
@@ -153,7 +165,6 @@ class Transaction:
 		
 	def serialize(self):
 		d = {
-			'uuid': binascii.hexlify(self.uuid).decode(),
 			'vin': [],
 			'vout': []
 		}
